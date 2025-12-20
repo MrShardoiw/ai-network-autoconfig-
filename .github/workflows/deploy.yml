@@ -18,4 +18,4 @@ jobs:
           DEVICE_IP: ${{ secrets.DEVICE_IP }}
           DEVICE_USER: ${{ secrets.DEVICE_USER }}
           DEVICE_PASS: ${{ secrets.DEVICE_PASS }}
-        run: python main_agent.p
+        run: python main_agent.py
