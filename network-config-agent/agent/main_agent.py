@@ -1,47 +1,50 @@
 import os
+import sys
 from openai import OpenAI
 from netmiko import ConnectHandler
 
-def run_network_task():
-    # 1. Get credentials from GitHub Environment
+def run_task():
+    print("--- Starting AI Network Agent ---")
+    
+    # Load secrets from GitHub environment
     api_key = os.getenv("OPENAI_API_KEY")
-    device_ip = os.getenv("DEVICE_IP")
-    device_user = os.getenv("DEVICE_USER")
-    device_pass = os.getenv("DEVICE_PASS")
+    host = os.getenv("DEVICE_IP")
+    user = os.getenv("DEVICE_USER")
+    pasw = os.getenv("DEVICE_PASS")
 
     if not api_key:
-        print("ERROR: OpenAI API Key is missing!")
-        return
+        print("ERROR: Missing OPENAI_API_KEY secret!")
+        sys.exit(1)
 
+    # 1. Ask AI for config
     client = OpenAI(api_key=api_key)
-
-    # 2. Ask AI for the config
-    intent = "Configure a description 'Managed_by_GitHub' on interface GigabitEthernet1"
-    print(f"Asking AI to generate config for: {intent}")
+    intent = "Set description to 'Configured_by_Gemini_AI' on interface GigabitEthernet1"
     
+    print(f"Requesting AI config for: {intent}")
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": f"Generate Cisco IOS commands for: {intent}. No text, just commands."}]
+        messages=[{"role": "user", "content": f"Provide only Cisco IOS commands for: {intent}"}]
     )
-    config_commands = response.choices[0].message.content.strip()
-    print(f"Generated Commands:\n{config_commands}")
+    commands = response.choices[0].message.content.strip().split('\n')
+    print(f"AI Generated Commands: {commands}")
 
-    # 3. Connect to the Cisco Sandbox
+    # 2. Connect to Device
     device = {
         "device_type": "cisco_ios",
-        "host": device_ip,
-        "username": device_user,
-        "password": device_pass,
+        "host": host,
+        "username": user,
+        "password": pasw,
     }
 
     try:
-        print(f"Connecting to {device_ip}...")
+        print(f"Connecting to {host}...")
         with ConnectHandler(**device) as net_connect:
-            output = net_connect.send_config_set(config_commands.split("\n"))
-            print("SUCCESS! Output from Router:")
+            output = net_connect.send_config_set(commands)
+            print("SUCCESS! Router Output:")
             print(output)
     except Exception as e:
-        print(f"FAILED to connect: {e}")
+        print(f"CONNECTION FAILED: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    run_network_task()
+    run_task()
